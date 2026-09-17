@@ -29,3 +29,10 @@
 - [x] Explicit fighting / magic / ability / battlefield detail rule in the writer
 - [x] Lanes tuned (6 per user, 2 per key over 10 keys) so 2-3 people can run
       the service at the same time
+
+## Agnes AI rebuild (Sep 17 2026)
+- [x] Image rendering moved from the 10-key Pixazo pool to a single Agnes AI key
+      (`agnes-image-2.1-flash`, https://apihub.agnes-ai.com/v1/images/generations)
+- [x] Art direction switched from 1990s Western comic book to full-colour manga
+- [x] Agnes + Z.ai keys stored as encrypted server-only secrets
+- [x] End-to-end run verified: two coloured manga panels rendered
