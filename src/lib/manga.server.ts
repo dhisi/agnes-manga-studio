@@ -473,6 +473,7 @@ export async function writePrompts(
   from: number,
   to: number,
   requested?: number[],
+  previousPrompt?: string,
 ): Promise<string[]> {
   bible = normalizeLeadCharacter(bible);
   const wanted = requested?.length
@@ -517,6 +518,9 @@ export async function writePrompts(
     return textChat(
       PROMPT_SYSTEM,
       `CHARACTER BIBLE:\n${bible || "(none)"}\n\n` +
+        (previousPrompt
+          ? `PREVIOUS PANEL VISUAL LOCK (reuse its cast appearance, clothing, location architecture, furniture, colours and time of day unless the requested script line explicitly changes them; do not repeat its action):\n${clip(previousPrompt, 1800)}\n\n`
+          : "") +
         `NUMBERED SCRIPT (read it for continuity):\n${script}\n\n` +
         `LINES TO DRAW — write ONE prompt for EACH of these ${want.length} lines and nothing else. ` +
         `Each prompt draws ONLY its own numbered line's moment, place and action, and must be ` +
@@ -779,7 +783,7 @@ export async function writePrompts(
   console.log(
     `[prompts] DONE lines ${from}-${to} in ${Date.now() - t0}ms: ${built.length - empties}/${count} written, ${empties} empty`,
   );
-  return chainContinuity(built, all, wanted);
+  return chainContinuity(built, all, wanted, previousPrompt);
 }
 
 
@@ -906,9 +910,10 @@ export function chainContinuity(
   prompts: string[],
   all?: Segment[],
   wanted?: number[],
+  previousPrompt?: string,
 ): string[] {
   if (!all || !wanted || wanted.length !== prompts.length) return prompts;
-  let active: string | null = null;
+  let active: string | null = previousPrompt ? detectSetting(previousPrompt) : null;
   return prompts.map((prompt, i) => {
     if (!prompt.trim()) return prompt;
     const here = detectSetting(prompt);
@@ -1239,6 +1244,23 @@ export function parseBible(bible: string): { name: string; traits: string }[] {
     })
     .filter((v): v is { name: string; traits: string } => v !== null)
     .slice(0, 12);
+}
+
+/** Fixed recurring places from the same continuity sheet. */
+export function parsePlaceBible(bible: string): { name: string; traits: string }[] {
+  return bible
+    .split("\n")
+    .map((line) => line.replace(/^[\s\-*•\d.)]+/, "").trim())
+    .filter(Boolean)
+    .map((line) => {
+      const match = /^(?:place|location|setting)\s*-\s*([^:]+):\s*(.+)$/i.exec(line);
+      if (!match) return null;
+      const name = (match[1] ?? "").trim();
+      const traits = (match[2] ?? "").trim();
+      return name && traits ? { name, traits } : null;
+    })
+    .filter((value): value is { name: string; traits: string } => value !== null)
+    .slice(0, 8);
 }
 
 /** Characters explicitly named in script text or a written prompt. */
@@ -1582,14 +1604,14 @@ export function hasPeople(prompt: string, bible?: string): boolean {
 // thousand characters: a 1900-character prompt rendered a pretty picture of
 // the WRONG moment, which is what the Fix/Reroll buttons were compensating
 // for. Short and dense beats long and complete.
-const IMAGE_PROMPT_BUDGET = 1150;
+const IMAGE_PROMPT_BUDGET = 1900;
 // Flux CLIP gives the first ~300 characters the strongest influence. Keep the
 // exact action inside that window rather than allowing decorative detail to
 // displace it.
-const SCENE_BUDGET = 620;
+const SCENE_BUDGET = 850;
 // Enough for hair, eyes, skin and outfit of up to three characters without
 // turning the prompt into a character sheet.
-const LOCK_BUDGET = 300;
+const LOCK_BUDGET = 650;
 
 
 /**
@@ -1687,25 +1709,25 @@ function identityBrief(prompt: string, bible?: string): string {
   );
   if (matched.length === 0) return "";
   const shown = matched.slice(0, 3);
-  const folded = prompt.toLocaleLowerCase();
-  const briefs = shown.map((entry) => {
-    // DESCRIBE EACH PERSON ONCE. The writing model already weaves a character's
-    // hair, eyes and outfit into the scene sentence; repeating those traits here
-    // read to Flux as a second, similar-looking person, and panels came back
-    // with twin Kais and two Harutos. So when the scene already carries the
-    // traits, this list contributes the NAME only.
-    const traits = dedupeWords(entry.traits.replace(/\.$/, ""));
-    const tokens = traits
-      .toLocaleLowerCase()
-      .match(/\b[a-z]{4,}\b/g)
-      ?.filter((w) => !/(year|male|female|build|expression|posture|young|old)/.test(w));
-    const already = (tokens ?? []).filter((w) => folded.includes(w)).length;
-    return already >= 2 ? entry.name : `${entry.name} is ${clip(traits, 95)}`;
-  });
+  const briefs = shown.map(
+    (entry) => `${entry.name} is the same recurring person: ${clip(dedupeWords(entry.traits.replace(/\.$/, "")), 190)}`,
+  );
   // An explicit headcount is what stopped the renderer inventing extra copies.
   const count =
     shown.length === 1 ? "exactly one person" : `exactly ${["", "one", "two", "three"][shown.length]} people`;
-  return `${count} in this frame: ${briefs.join("; ")}`;
+  return `${count} total in this frame: ${briefs.join("; ")}. Each name refers to one body only; preserve these exact facial features, hair and outfit colours`;
+}
+
+/** Repeats the established architecture and palette whenever a known place appears. */
+function placeBrief(prompt: string, bible?: string): string {
+  if (!bible) return "";
+  const folded = prompt.toLocaleLowerCase();
+  const place = parsePlaceBible(bible).find((entry) => {
+    const name = entry.name.toLocaleLowerCase();
+    return folded.includes(name) || name.split(/[^a-z]+/).some((part) => part.length > 4 && folded.includes(part));
+  });
+  if (!place) return "";
+  return `recurring location lock: ${place.name} always has ${clip(place.traits.replace(/\.$/, ""), 260)}; preserve the same architecture, room layout, furniture, materials and colour palette`;
 }
 
 /**
@@ -1800,6 +1822,7 @@ export function composeImagePrompt(
   // Exactly ONE identity description per character, and only when someone is
   // actually in frame. No second appearance-lock paragraph.
   const identity = peopled ? clip(identityBrief(sceneText, bible), LOCK_BUDGET) : "";
+  const location = placeBrief(sceneText, bible);
 
   // The place owns the very first words. A close-up line ("Close-up of Yuki
   // shouting") used to open the prompt with a face and nothing else, and the
@@ -1821,10 +1844,13 @@ export function composeImagePrompt(
     `${STYLE_LEAD} ${placeLead}${beat.lead}`,
     restText,
     identity,
+    location,
     continuity ? clip(`same place and same people as the previous picture: ${continuity}`, 160) : "",
     peopled ? STAGING_GUARD : "",
     peopled ? FRAMING_GUARD : "",
-    peopled ? "each person appears once" : "empty location, scenery only",
+    peopled
+      ? "strict cast count: each named person appears exactly once as one complete body; no twins, clones, doubles, reflections, lookalikes or extra background people"
+      : "empty location, scenery only",
     BACKGROUND_GUARD,
   ].filter(Boolean);
 
