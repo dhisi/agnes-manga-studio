@@ -22,11 +22,11 @@ const IMAGE_REQUEST_TIMEOUT_MS = 1_800_000;
  * pencil sketches can make the renderer draw them.
  */
 export const STYLE =
-  "FIXED VISUAL STYLE: one single full-colour Japanese manga illustration, modern anime/manga artwork, clean confident " +
-  "black ink linework with tapering line weight, bright saturated cel-shaded colour with soft airbrushed gradients and " +
-  "crisp shadow shapes, expressive large manga eyes with detailed highlights, delicate manga facial features and natural " +
-  "slender anime proportions, glossy hair colour highlights, dynamic manga action staging with speed lines and motion " +
-  "energy on movement, fully painted detailed coloured background, polished finished coloured manga plate illustration";
+  "FIXED VISUAL STYLE: one single mature full-colour Japanese manga illustration, authentic hand-inked manga draftsmanship, " +
+  "confident tapered line weight, realistic adult facial structure, natural eye size, believable anatomy and body proportions, " +
+  "restrained harmonious colours, nuanced painted light and shadow, tactile fabric and environmental textures, expressive but " +
+  "subtle acting, cinematic manga composition, purposeful speed lines only during movement, richly observed coloured surroundings, " +
+  "polished serialized seinen manga artwork";
 
 
 /**
@@ -1165,7 +1165,7 @@ const DARK_TRIGGERS: [RegExp, string][] = [
  * The written prompt must describe CONTENT ONLY. Any medium/style/genre word
  * the writing model slips in (realistic, photo, 3D render, oil painting, and
  * even "anime"/"manga" themselves) is deleted here, so the ONLY style
- * statement that ever reaches the renderer is the fixed anime block added in
+ * statement that ever reaches the renderer is the fixed manga block added in
  * composeImagePrompt.
  */
 const STYLE_TRIGGERS: [RegExp, string][] = [
@@ -1634,7 +1634,7 @@ function clip(s: string, max: number): string {
  * draw.
  */
 const STYLE_LEAD =
-  "one single full-colour Japanese manga illustration showing";
+  "one single mature full-colour Japanese manga illustration showing";
 
 
 /**
@@ -1649,9 +1649,9 @@ const STYLE_LEAD =
  * being used for.
  */
 const STYLE_TAIL =
-  "full-colour anime manga art style, clean black ink linework, bright saturated cel shading with soft gradients, " +
-  "expressive manga eyes, slender anime proportions, glossy hair highlights, dynamic manga staging, fully coloured " +
-  "detailed background, consistent polished coloured manga illustration";
+  "authentic mature Japanese manga artwork, hand-inked tapered linework, realistic facial structure and natural eye size, " +
+  "believable anatomy and body proportions, restrained harmonious colour, nuanced painted shading, tactile textures, " +
+  "cinematic composition, richly detailed coloured setting, consistent polished seinen manga finish";
 
 
 /**
