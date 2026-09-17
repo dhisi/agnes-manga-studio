@@ -36,3 +36,7 @@
 - [x] Art direction switched from 1990s Western comic book to full-colour manga
 - [x] Agnes + Z.ai keys stored as encrypted server-only secrets
 - [x] End-to-end run verified: two coloured manga panels rendered
+- [x] Strengthen continuity: carry the previous panel into each prompt, preserve
+      recurring-location details, repeat full character identity/outfit locks,
+      and enforce exact cast counts with duplicate-person prevention
+- [ ] Verify the stronger locks with a fresh multi-panel Agnes generation

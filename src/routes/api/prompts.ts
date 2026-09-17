@@ -9,6 +9,7 @@ const Input = z
     from: z.number().int().min(1),
     to: z.number().int().min(1),
     lines: z.array(z.number().int().min(1)).min(1).max(120).optional(),
+    previousPrompt: z.string().max(2_000).optional(),
     segments: z
       .array(
         z.object({
@@ -84,7 +85,7 @@ export const Route = createFileRoute("/api/prompts")({
 
             void withRun(
               input.runAt,
-              () => writePrompts(input.bible, input.segments, input.from, input.to, input.lines),
+              () => writePrompts(input.bible, input.segments, input.from, input.to, input.lines, input.previousPrompt),
               // The browser dropping this request (Insta Kill, refresh, closed
               // tab) aborts the upstream work at once, freeing the key.
               request.signal,
